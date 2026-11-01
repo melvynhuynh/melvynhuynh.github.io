@@ -3,7 +3,7 @@ layout: projects
 title: Projects
 ---
 
-More projects on my public [GitHub repositories](https://github.com/melvynhuynh?tab=repositories)!
+More projects on my public [GitHub repositories](https://github.com/melvynhuynh)!
 
 ## Teaching
 
