@@ -1,0 +1,56 @@
+# This file is *NOT* reloaded automatically by 'jekyll serve'.
+# Restart the server after changing it.
+
+title: Melvyn Huynh
+description: Melvyn Huynh, M.Sc. student in Robotics at EPFL.
+baseurl: ""
+url: "https://melvynhuynh.github.io"
+og_image: /assets/img/profile-pic.jpg
+favicon_emoji: "🧧"
+
+header:
+  pages:
+    - name: Home
+      slug: /
+    - name: Projects
+    - name: Personal
+    - name: CV
+      slug: /assets/pdf/cv/cv.pdf
+
+footer:
+  show_powered_by: true
+  contact:
+    - type: email
+      name: melvyn.huynh@epfl.ch
+      value: melvyn.huynh@epfl.ch
+  follow:
+    - type: github
+      name: GitHub
+      link: https://github.com/melvynhuynh
+    - type: linkedin
+      name: LinkedIn
+      link: https://www.linkedin.com/in/melvyn-huynh
+
+# Build settings
+markdown: kramdown
+sass:
+    style: :compressed
+
+# Excluded items
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - LICENSE.md
+  - docker-compose.yml
+  - cv-latex/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Used for defeating caching
+version: 1

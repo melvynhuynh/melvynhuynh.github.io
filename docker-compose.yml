@@ -1,0 +1,13 @@
+services:
+  site:
+    image: public.ecr.aws/docker/library/ruby:3.3
+    working_dir: /srv/site
+    command: sh -c "bundle install && bundle exec jekyll serve --host 0.0.0.0 --force_polling"
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/srv/site
+      - bundle:/usr/local/bundle
+
+volumes:
+  bundle:

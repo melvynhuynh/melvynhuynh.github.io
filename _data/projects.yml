@@ -1,0 +1,16 @@
+# "description" accepts Markdown links. Delete a "todo" line once it is done.
+- title: Human-robot interaction with Pepper
+  context: Semester project, Idiap, since Sep 2026
+  description: Vision-based perception module that lets the Pepper robot infer user engagement, with a ROS4HRI pipeline that turns vision data into interpretable user-state primitives.
+- title: How solopreneurs experience AI
+  context: Research assistant, Applied AI Lab (AAIL), since Sep 2026
+  description: Building a Reddit dataset, collected with LLM agents, on how people running a business alone experience AI.
+- title: Computer vision for a prosthetic arm
+  context: N-Pulse, since Sep 2026
+  description: Deploying a multi-class object detection model on an Arduino UNO Q so that a prosthetic arm can grab objects.
+- title: EMG and EEG decoding
+  context: N-Pulse, Feb to Jul 2026
+  description: Integrated AI models into STM32 firmware to decode hand movements from EEG and EMG signals, and benchmarked TinyML techniques for resource-limited hardware.
+- title: Imitation learning on a robotic arm
+  context: "[EPFL AI Team](https://epflaiteam.ch/projects/dexter), Mar to Jul 2026"
+  description: "Imitation learning and RL pipelines with LeRobot and PyTorch on a leader-follower [SO-101](https://github.com/TheRobotStudio/SO-ARM100) setup, from teleoperated data collection to trained manipulation policies."
