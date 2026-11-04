@@ -7,7 +7,7 @@ profile_picture:
 
 Hello! My name is **Melvyn Huynh**, and I like building robots that learn from people. I'm a second-year M.Sc. student in [Robotics at EPFL](https://www.epfl.ch/education/master/programs/robotics/), where I also earned my B.Sc. in Microengineering.
 
-I'm interested in embodied AI, imitation learning and human-robot interaction: how a robot can pick up a skill by watching someone perform it, and how it can then work naturally alongside people.
+I'm interested in embodied AI, machine learning and human-robot interaction: how a robot can pick up a skill by learning from data, and how it can then work naturally alongside people.
 
 I'm currently a research assistant at the [Applied AI Lab (AAIL)](https://wp.unil.ch/aail/), where I build a Reddit dataset on how solopreneurs experience AI, and a teaching assistant for the AI for Business course. I'm also doing a semester project on human-robot interaction at [Idiap](https://www.idiap.ch/en), building a vision-based module that lets the Pepper robot infer user engagement.
 
