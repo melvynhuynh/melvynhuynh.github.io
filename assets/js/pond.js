@@ -1,10 +1,11 @@
 /**
- * Koi banner, drawn on a canvas in ink and watercolor.
+ * Koi banner, drawn on a canvas in ink and watercolor. Clicking the red envelope
+ * replays the animation with robotic koi, and clicking it again brings the first ones back.
  * The water is painted once below the koi, and the lotus and leaves once above them.
  */
 var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function createPond(pond) {
+function createPond(pond, startRobotic) {
   var canvas = pond.querySelector("canvas");
   var ctx = canvas.getContext && canvas.getContext("2d");
   if (!ctx) return null;
@@ -21,6 +22,7 @@ function createPond(pond) {
   var clock = 0;
   var running = false;
   var visible = true;
+  var robotic = startRobotic;
   var lastRipple = 0;
 
   /**
@@ -328,6 +330,8 @@ function createPond(pond) {
       speckle: settings.speckle,
       tailRoot: settings.tailRoot,
       patches: settings.patches,
+      accent: settings.accent,
+      accents: settings.accents,
       strokes: settings.strokes,
       greeting: settings.greeting,
       nextSay: settings.firstSay,
@@ -506,7 +510,7 @@ function createPond(pond) {
   function drawPectoralFins(g, koi, line) {
     var joint = line[3];
     var flap = Math.sin(koi.phase * 0.55) * 0.2;
-    var l = koi.length * 0.3;
+    var l = koi.length * 0.2;
     var width = halfWidth(koi, joint.u) * 0.72;
 
     [-1, 1].forEach(function(side) {
@@ -555,10 +559,10 @@ function createPond(pond) {
     g.bezierCurveTo(s * 0.7, s * 0.55, s * 0.3, s * 0.3 + offset, -s * 0.1, s * 0.05);
   }
 
-  function drawTail(g, koi, line) {
+  function drawWatercolorTail(g, koi, line) {
     var end = line[koi.count];
     var sway = Math.sin(koi.phase - koi.count * 0.55) * 0.44;
-    var s = koi.length * 0.36;
+    var s = koi.length * 0.25;
 
     g.save();
     g.translate(end.x, end.y);
@@ -593,21 +597,7 @@ function createPond(pond) {
     g.restore();
   }
 
-  function pointOn(koi, line, u, side) {
-    var index = u * koi.count;
-    var low = Math.floor(index);
-    var from = line[low];
-    var to = line[Math.min(low + 1, koi.count)];
-    var mix = index - low;
-    var offset = side * halfWidth(koi, u);
-    return {
-      x: from.x + (to.x - from.x) * mix + from.nx * offset,
-      y: from.y + (to.y - from.y) * mix + from.ny * offset,
-      angle: from.angle
-    };
-  }
-
-  function drawKoi(g, koi) {
+  function drawWatercolorKoi(g, koi) {
     if (koi.delay > 0 || koi.away > 0) return;
     var line = spine(koi);
 
@@ -619,7 +609,7 @@ function createPond(pond) {
     g.fill();
     g.restore();
 
-    drawTail(g, koi, line);
+    drawWatercolorTail(g, koi, line);
     drawPectoralFins(g, koi, line);
 
     g.save();
@@ -732,6 +722,243 @@ function createPond(pond) {
     });
   }
 
+  function pointOn(koi, line, u, side) {
+    var index = Math.max(0, Math.min(u, 0.999)) * koi.count;
+    var low = Math.floor(index);
+    var from = line[low];
+    var to = line[Math.min(low + 1, koi.count)];
+    var mix = index - low;
+    var offset = side * halfWidth(koi, u);
+    return {
+      x: from.x + (to.x - from.x) * mix + from.nx * offset,
+      y: from.y + (to.y - from.y) * mix + from.ny * offset,
+      angle: from.angle
+    };
+  }
+
+  // A small polished joint
+  function chromeJoint(g, x, y, radius) {
+    var shine = g.createRadialGradient(x - radius * 0.3, y - radius * 0.3, 0, x, y, radius);
+    shine.addColorStop(0, "#ffffff");
+    shine.addColorStop(0.55, "#b9c8d4");
+    shine.addColorStop(1, "#5d6f7e");
+    g.fillStyle = shine;
+    g.strokeStyle = "rgba(32, 40, 48, 0.8)";
+    g.lineWidth = 0.6;
+    g.beginPath();
+    g.arc(x, y, radius, 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+  }
+
+  // One long white feather of a fin, with a fine rib down the middle
+  function feather(g, length, width, curl) {
+    var wash = g.createLinearGradient(0, 0, length, 0);
+    wash.addColorStop(0, "#ffffff");
+    wash.addColorStop(0.6, "#f2f7fb");
+    wash.addColorStop(1, "#d3e2ee");
+    g.fillStyle = wash;
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.bezierCurveTo(length * 0.3, -width, length * 0.72, -width + curl, length, curl);
+    g.bezierCurveTo(length * 0.72, width * 0.45 + curl, length * 0.3, width * 0.62, 0, 0);
+    g.fill();
+    g.strokeStyle = "rgba(34, 40, 48, 0.72)";
+    g.lineWidth = 0.85;
+    g.stroke();
+    g.strokeStyle = "rgba(92, 126, 152, 0.5)";
+    g.lineWidth = 0.6;
+    g.beginPath();
+    g.moveTo(length * 0.06, 0);
+    g.quadraticCurveTo(length * 0.5, -width * 0.2 + curl * 0.4, length * 0.92, curl);
+    g.stroke();
+  }
+
+  // Feathers fanned out from a joint, from the outer one to the inner one
+  function fan(g, length, angles, koi, wave) {
+    var width = length * 0.17;
+    angles.forEach(function(entry, index) {
+      g.save();
+      g.rotate(entry.angle + Math.sin(koi.phase * 0.7 + index * 0.5) * wave);
+      feather(g, length * entry.size, width, length * entry.angle * 0.1);
+      g.restore();
+    });
+    chromeJoint(g, 0, 0, Math.max(1.5, length * 0.05));
+  }
+
+  function drawSideFins(g, koi, line) {
+    var flap = Math.sin(koi.phase * 0.55) * 0.18;
+    [
+      {
+        u: 0.27,
+        length: koi.length * 0.34,
+        turn: 0.95 + flap,
+        angles: [
+          { angle: -0.5, size: 0.66 },
+          { angle: -0.22, size: 0.88 },
+          { angle: 0.06, size: 1 },
+          { angle: 0.36, size: 0.82 }
+        ]
+      }
+    ].forEach(function(fin) {
+      [-1, 1].forEach(function(side) {
+        var joint = pointOn(koi, line, fin.u, side * 0.84);
+        g.save();
+        g.translate(joint.x, joint.y);
+        // The local angle points to the head, so the fin sweeps backwards
+        g.rotate(joint.angle + Math.PI - side * fin.turn);
+        g.scale(1, side);
+        fan(g, fin.length, fin.angles, koi, 0.02);
+        g.restore();
+      });
+    });
+  }
+
+  function drawRobotTail(g, koi, line) {
+    var end = pointOn(koi, line, 0.96, 0);
+    var sway = Math.sin(koi.phase - koi.count * 0.55) * 0.42;
+    var size = koi.length * 0.44;
+    g.save();
+    g.translate(end.x, end.y);
+    g.rotate(end.angle + Math.PI + sway);
+    fan(g, size, [
+      { angle: -0.66, size: 0.98 },
+      { angle: 0.66, size: 0.98 },
+      { angle: -0.44, size: 0.92 },
+      { angle: 0.44, size: 0.92 },
+      { angle: -0.22, size: 0.8 },
+      { angle: 0.22, size: 0.8 },
+      { angle: 0, size: 0.68 }
+    ], koi, 0.05);
+    g.restore();
+  }
+
+  // Big round cute eye: a white rim, a shiny dark pupil and two sparkles
+  function cuteEye(g, x, y, radius) {
+    g.fillStyle = "#ffffff";
+    g.strokeStyle = "rgba(30, 38, 46, 0.85)";
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.arc(x, y, radius, 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+
+    var pupil = g.createRadialGradient(x, y + radius * 0.3, radius * 0.1, x, y, radius * 0.82);
+    pupil.addColorStop(0, "#3a6f9e");
+    pupil.addColorStop(0.55, "#16222e");
+    pupil.addColorStop(1, "#0b1016");
+    g.fillStyle = pupil;
+    g.beginPath();
+    g.arc(x, y, radius * 0.82, 0, Math.PI * 2);
+    g.fill();
+
+    g.fillStyle = "#ffffff";
+    g.beginPath();
+    g.arc(x - radius * 0.28, y - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.arc(x + radius * 0.28, y + radius * 0.3, radius * 0.13, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  function seam(g, koi, line, u) {
+    var from = pointOn(koi, line, u, -1);
+    var bend = pointOn(koi, line, u + 0.04, 0);
+    var to = pointOn(koi, line, u, 1);
+    g.strokeStyle = "rgba(34, 42, 50, 0.55)";
+    g.lineWidth = 0.75;
+    g.beginPath();
+    g.moveTo(from.x, from.y);
+    g.quadraticCurveTo(bend.x, bend.y, to.x, to.y);
+    g.stroke();
+  }
+
+  function drawRobotKoi(g, koi) {
+    if (koi.delay > 0 || koi.away > 0) return;
+    var line = spine(koi);
+
+    // Soft shadow on the water
+    g.save();
+    g.translate(koi.length * 0.03, koi.length * 0.05);
+    g.fillStyle = "rgba(30, 95, 115, 0.2)";
+    bodyPath(g, koi, line);
+    g.fill();
+    g.restore();
+
+    drawRobotTail(g, koi, line);
+    drawSideFins(g, koi, line);
+
+    // Smooth white shell
+    g.save();
+    bodyPath(g, koi, line);
+    g.fillStyle = "#fbfdfe";
+    g.fill();
+    g.clip();
+
+    // Watercolor colors on the shell, fading at their edges
+    koi.accents.forEach(function(accent) {
+      var at = pointOn(koi, line, accent.at, accent.side);
+      var radius = accent.size * koi.length;
+      var pool = g.createRadialGradient(at.x, at.y, radius * 0.1, at.x, at.y, radius);
+      pool.addColorStop(0, "rgba(" + koi.accent + ", 0.96)");
+      pool.addColorStop(0.7, "rgba(" + koi.accent + ", 0.82)");
+      pool.addColorStop(1, "rgba(" + koi.accent + ", 0)");
+      g.fillStyle = pool;
+      g.fillRect(at.x - radius, at.y - radius, radius * 2, radius * 2);
+    });
+
+    // Cool shade along the sides of the shell
+    bodyPath(g, koi, line);
+    g.strokeStyle = "rgba(112, 156, 190, 0.34)";
+    g.lineWidth = koi.length * 0.06;
+    g.stroke();
+    g.strokeStyle = "rgba(72, 112, 146, 0.26)";
+    g.lineWidth = koi.length * 0.024;
+    g.stroke();
+
+    seam(g, koi, line, 0.44);
+    seam(g, koi, line, 0.62);
+    seam(g, koi, line, 0.78);
+
+    // Back of the head, and a soft shine on the dome
+    seam(g, koi, line, 0.165);
+    var shine = pointOn(koi, line, 0.075, -0.1);
+    var light = g.createRadialGradient(shine.x, shine.y, 0, shine.x, shine.y, koi.length * 0.08);
+    light.addColorStop(0, "rgba(255, 255, 255, 0.85)");
+    light.addColorStop(1, "rgba(255, 255, 255, 0)");
+    g.fillStyle = light;
+    g.fillRect(shine.x - koi.length * 0.08, shine.y - koi.length * 0.08, koi.length * 0.16, koi.length * 0.16);
+    g.restore();
+
+    // Two loose pencil outlines, one firm and one faint
+    g.strokeStyle = "rgba(30, 36, 44, 0.82)";
+    g.lineWidth = 1;
+    bodyPath(g, koi, line, 0.5, 1);
+    g.stroke();
+    g.strokeStyle = "rgba(30, 36, 44, 0.3)";
+    g.lineWidth = 0.7;
+    bodyPath(g, koi, line, 1.5, 2);
+    g.stroke();
+
+    // Mouth
+    var mouthA = pointOn(koi, line, 0.02, -0.72);
+    var mouthB = pointOn(koi, line, 0.04, 0);
+    var mouthC = pointOn(koi, line, 0.02, 0.72);
+    g.strokeStyle = "rgba(30, 36, 44, 0.62)";
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.moveTo(mouthA.x, mouthA.y);
+    g.quadraticCurveTo(mouthB.x, mouthB.y, mouthC.x, mouthC.y);
+    g.stroke();
+
+    // Big cute eyes
+    var eyeSize = Math.max(2.2, koi.length * 0.029);
+    [-1, 1].forEach(function(side) {
+      var eye = pointOn(koi, line, 0.09, side * 0.68);
+      cuteEye(g, eye.x, eye.y, eyeSize);
+    });
+  }
+
   /**
    * Speech bubble in front of the head of a koi, drawn in ink
    */
@@ -839,7 +1066,8 @@ function createPond(pond) {
     ctx.drawImage(water, 0, 0, W, H);
     drawRipples(ctx, dt);
     kois.forEach(function(koi) {
-      drawKoi(ctx, koi);
+      if (robotic) drawRobotKoi(ctx, koi);
+      else drawWatercolorKoi(ctx, koi);
     });
     ctx.drawImage(foreground, 0, 0, W, H);
     kois.forEach(function(koi) {
@@ -888,6 +1116,14 @@ function createPond(pond) {
         seed: 1.3,
         delay: 0.3,
         target: { x: area.x + area.w * 0.36, y: area.y + area.h * 0.46 },
+        accent: red,
+        accents: [
+          { at: 0.09, side: 0, size: 0.075 },
+          { at: 0.29, side: -0.28, size: 0.14 },
+          { at: 0.46, side: 0.3, size: 0.15 },
+          { at: 0.64, side: -0.22, size: 0.14 },
+          { at: 0.82, side: 0.12, size: 0.1 }
+        ],
         speckle: "rgba(120, 28, 12, 0.34)",
         tailRoot: "rgba(206, 52, 30, 0.72)",
         patches: [
@@ -913,6 +1149,14 @@ function createPond(pond) {
         seed: 4.1,
         delay: 2.6,
         target: { x: area.x + area.w * 0.8, y: area.y + area.h * 0.62 },
+        accent: ink,
+        accents: [
+          { at: 0.13, side: 0.1, size: 0.07 },
+          { at: 0.3, side: 0.3, size: 0.13 },
+          { at: 0.47, side: -0.32, size: 0.14 },
+          { at: 0.65, side: 0.25, size: 0.13 },
+          { at: 0.84, side: -0.08, size: 0.09 }
+        ],
         speckle: "rgba(20, 18, 18, 0.3)",
         tailRoot: "rgba(30, 28, 28, 0.78)",
         patches: [
@@ -931,6 +1175,27 @@ function createPond(pond) {
         greeting: null
       })
     ];
+  }
+
+  // One still picture, with the koi already in the water
+  function stillPicture() {
+    for (var t = 0; t < 7; t += 0.033) {
+      clock += 0.033;
+      kois.forEach(function(koi) {
+        updateKoi(koi, 0.033);
+      });
+    }
+    kois[0].say = { text: "Hi!", born: clock, life: Infinity };
+    render(0);
+  }
+
+  // Swap the drawing and replay the animation from the start
+  function toggleRobotic() {
+    robotic = !robotic;
+    clock = 0;
+    ripples = [];
+    createKois();
+    if (reduceMotion) stillPicture();
   }
 
   function setup() {
@@ -962,15 +1227,7 @@ function createPond(pond) {
     }
 
     if (reduceMotion) {
-      // One still picture, with the koi already in the water
-      for (var t = 0; t < 7; t += 0.033) {
-        clock += 0.033;
-        kois.forEach(function(koi) {
-          updateKoi(koi, 0.033);
-        });
-      }
-      kois[0].say = { text: "Hi!", born: clock, life: Infinity };
-      render(0);
+      stillPicture();
     }
     else if (!running) {
       render(0);
@@ -990,7 +1247,7 @@ function createPond(pond) {
   pond.classList.add("is-ready");
   window.addEventListener("resize", setup);
 
-  if (reduceMotion) return;
+  if (reduceMotion) return toggleRobotic;
 
   // The koi follow a click, and the water reacts to the pointer
   pond.addEventListener("pointermove", function(event) {
@@ -1034,6 +1291,19 @@ function createPond(pond) {
   }
 
   setRunning(!document.hidden);
+  return toggleRobotic;
 }
 
-createPond(document.getElementById("pond"));
+var startRobotic = location.search.indexOf("koi=robot") !== -1;
+var toggleKoi = createPond(document.getElementById("pond"), startRobotic);
+
+// The robotic koi are only a surprise: reloading the page brings the first ones back
+if (startRobotic) history.replaceState(null, "", location.pathname);
+
+document.querySelectorAll(".koi-toggle").forEach(function(link) {
+  link.addEventListener("click", function(event) {
+    if (!toggleKoi) return;
+    event.preventDefault();
+    toggleKoi();
+  });
+});

@@ -13,3 +13,5 @@ title: Personal
 ## Koi fish
 
 <span lang="yue">年年有餘</span> is a Lunar New Year wish for "plenty, year after year". In Cantonese, <span lang="yue">餘</span> (plenty) sounds just like <span lang="yue">魚</span> (fish), which is why fish show up at New Year, on red envelopes and on the dinner table.
+
+Try clicking on the <a class="koi-toggle" href="/?koi=robot" aria-label="red envelope: see the robotic koi">🧧</a> and robotic fins will appear on the koi fish.
