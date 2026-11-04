@@ -331,6 +331,7 @@ function createPond(pond, startRobotic) {
       tailRoot: settings.tailRoot,
       patches: settings.patches,
       accent: settings.accent,
+      sketch: settings.sketch,
       accents: settings.accents,
       strokes: settings.strokes,
       greeting: settings.greeting,
@@ -960,6 +961,251 @@ function createPond(pond, startRobotic) {
   }
 
   /**
+   * Sketch koi: a body shaded like a rounded volume, soft pigment and loose pencil lines
+   */
+  function mixColor(a, b, t) {
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  }
+
+  function rgb(color, alpha) {
+    return "rgba(" + Math.round(color[0]) + ", " + Math.round(color[1]) + ", " + Math.round(color[2]) + ", " + (alpha === undefined ? 1 : alpha) + ")";
+  }
+
+  // How much pigment there is at a place of the body, from 0 to 1
+  function pigmentAt(koi, u, side) {
+    var band = Math.exp(-Math.pow(side + 0.12, 2) / 0.36);
+    var wave = 0.5 + 0.5 * Math.sin(u * 10.5 + koi.seed * 2) + 0.22 * Math.sin(u * 23 + koi.seed);
+    var amount = band * (0.62 + wave * 1.12) - 0.1;
+    return Math.max(0, Math.min(1, amount));
+  }
+
+  function shadeAt(koi, u, side) {
+    var cream = [252, 247, 238];
+    var cool = [122, 128, 146];
+    var amount = pigmentAt(koi, u, side);
+    var color = mixColor(cream, koi.sketch.main, Math.pow(amount, 0.8));
+    color = mixColor(color, koi.sketch.deep, amount * amount * 0.55);
+    var light = Math.max(0, Math.min(1, 1 - 0.44 * Math.pow(side + 0.3, 2)));
+    color = mixColor(cool, color, light);
+    var shine = Math.exp(-Math.pow(side + 0.42, 2) / 0.05) * 0.2;
+    return mixColor(color, [255, 255, 255], shine);
+  }
+
+  function paintBodyVolume(g, koi, line) {
+    var slices = 34;
+    var stops = [-1, -0.72, -0.44, -0.16, 0.12, 0.4, 0.7, 1];
+    for (var i = 0; i < slices; i++) {
+      var from = i / slices;
+      var to = Math.min(0.998, (i + 1.3) / slices);
+      var middle = (from + to) / 2;
+      var a = pointOn(koi, line, from, -1.2);
+      var b = pointOn(koi, line, to, -1.2);
+      var c = pointOn(koi, line, to, 1.2);
+      var d = pointOn(koi, line, from, 1.2);
+      var startPoint = pointOn(koi, line, middle, -1);
+      var endPoint = pointOn(koi, line, middle, 1);
+      var shade = g.createLinearGradient(startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+      stops.forEach(function(side) {
+        shade.addColorStop((side + 1) / 2, rgb(shadeAt(koi, middle, side)));
+      });
+      g.fillStyle = shade;
+      g.beginPath();
+      g.moveTo(a.x, a.y);
+      g.lineTo(b.x, b.y);
+      g.lineTo(c.x, c.y);
+      g.lineTo(d.x, d.y);
+      g.closePath();
+      g.fill();
+    }
+  }
+
+  function ribbonPath(g, l, w, offset) {
+    g.beginPath();
+    g.moveTo(0, -w * 0.25 + offset);
+    g.bezierCurveTo(l * 0.32, -w * 1.05 + offset, l * 0.72, -w * 1.1, l, -w * 0.3 + offset);
+    g.quadraticCurveTo(l * 0.93, w * 0.08, l * 0.86, w * 0.34 + offset);
+    g.quadraticCurveTo(l * 0.76, w * 0.46, l * 0.68, w * 0.72);
+    g.quadraticCurveTo(l * 0.56, w * 0.76 + offset, l * 0.46, w * 0.92);
+    g.quadraticCurveTo(l * 0.28, w * 0.86, 0, w * 0.25 + offset);
+  }
+
+  // Long soft fin: a tinted root, a grey wash at the edge, fine rays and loose lines
+  function drawRibbon(g, koi, l, w) {
+    var wash = g.createLinearGradient(0, 0, l, 0);
+    wash.addColorStop(0, rgb(koi.sketch.main, 0.62));
+    wash.addColorStop(0.28, "rgba(250, 245, 238, 0.74)");
+    wash.addColorStop(0.72, "rgba(232, 234, 238, 0.58)");
+    wash.addColorStop(1, "rgba(190, 194, 202, 0.3)");
+    g.fillStyle = wash;
+    ribbonPath(g, l, w, 0);
+    g.closePath();
+    g.fill();
+
+    g.save();
+    ribbonPath(g, l, w, 0);
+    g.closePath();
+    g.clip();
+    g.strokeStyle = "rgba(112, 118, 130, 0.22)";
+    g.lineWidth = w * 0.3;
+    ribbonPath(g, l, w, 0);
+    g.stroke();
+    g.restore();
+
+    g.strokeStyle = "rgba(52, 50, 54, 0.24)";
+    g.lineWidth = 0.6;
+    [-0.62, -0.36, -0.1, 0.14, 0.4].forEach(function(lean) {
+      g.beginPath();
+      g.moveTo(l * 0.08, lean * w * 0.25);
+      g.quadraticCurveTo(l * 0.5, lean * w * 1.1, l * 0.9, lean * w * 0.9 - w * 0.08);
+      g.stroke();
+    });
+
+    g.strokeStyle = "rgba(38, 36, 40, 0.42)";
+    g.lineWidth = 0.8;
+    ribbonPath(g, l, w, 0);
+    g.stroke();
+    g.strokeStyle = "rgba(38, 36, 40, 0.2)";
+    g.lineWidth = 0.6;
+    ribbonPath(g, l, w, w * 0.07);
+    g.stroke();
+  }
+
+  function drawSketchKoi(g, koi) {
+    if (koi.delay > 0 || koi.away > 0) return;
+    var line = spine(koi);
+
+    // Soft shadow on the water
+    g.save();
+    g.translate(koi.length * 0.035, koi.length * 0.06);
+    g.fillStyle = "rgba(30, 95, 115, 0.2)";
+    bodyPath(g, koi, line);
+    g.fill();
+    g.restore();
+
+    // Tail, in two long lobes that start inside the body
+    var root = pointOn(koi, line, 0.86, 0);
+    var sway = Math.sin(koi.phase - koi.count * 0.55) * 0.38;
+    [-1, 1].forEach(function(side) {
+      g.save();
+      g.translate(root.x, root.y);
+      g.rotate(root.angle + Math.PI + sway + side * 0.34);
+      g.scale(1, side);
+      drawRibbon(g, koi, koi.length * 0.5, koi.length * 0.13);
+      g.restore();
+    });
+
+    // Fins near the head
+    var flap = Math.sin(koi.phase * 0.55) * 0.18;
+    [-1, 1].forEach(function(side) {
+      var joint = pointOn(koi, line, 0.27, side * 0.82);
+      g.save();
+      g.translate(joint.x, joint.y);
+      g.rotate(joint.angle + Math.PI - side * (1.05 + flap));
+      g.scale(1, side);
+      drawRibbon(g, koi, koi.length * 0.36, koi.length * 0.13);
+      g.restore();
+    });
+
+    // Rounded body
+    g.save();
+    bodyPath(g, koi, line);
+    g.clip();
+    paintBodyVolume(g, koi, line);
+
+    // Pale patch on the back and on the forehead, like wet paint lifted off
+    [[0.42, -0.2, 0.065], [0.09, -0.1, 0.05]].forEach(function(patch) {
+      var at = pointOn(koi, line, patch[0], patch[1]);
+      var radius = koi.length * patch[2];
+      var soft = g.createRadialGradient(at.x, at.y, 0, at.x, at.y, radius);
+      soft.addColorStop(0, "rgba(255, 252, 246, 0.78)");
+      soft.addColorStop(1, "rgba(255, 252, 246, 0)");
+      g.fillStyle = soft;
+      g.fillRect(at.x - radius, at.y - radius, radius * 2, radius * 2);
+    });
+
+    // Grains of pigment
+    koi.speckles.forEach(function(speck) {
+      if (pigmentAt(koi, speck.u, speck.side) < 0.28) return;
+      var p = pointOn(koi, line, speck.u, speck.side);
+      g.fillStyle = rgb(koi.sketch.deep, 0.42);
+      g.beginPath();
+      g.arc(p.x, p.y, speck.size * Math.max(0.6, koi.length / 240), 0, Math.PI * 2);
+      g.fill();
+    });
+
+    // Scales, only where the color is strong
+    g.strokeStyle = rgb(koi.sketch.deep, 0.3);
+    g.lineWidth = 0.6;
+    for (var i = 4; i < koi.count - 1; i++) {
+      [-0.56, -0.24, 0.08, 0.4].forEach(function(row, index) {
+        if ((i + index) % 2) return;
+        var u = i / koi.count;
+        if (pigmentAt(koi, u, row) < 0.3) return;
+        var scale = pointOn(koi, line, u, row);
+        g.beginPath();
+        g.arc(scale.x, scale.y, koi.length * 0.018, scale.angle - 1.2, scale.angle + 1.2);
+        g.stroke();
+      });
+    }
+    g.restore();
+
+    // Long soft fin along the back, leaning to one side
+    var dorsal = pointOn(koi, line, 0.36, -0.1);
+    g.save();
+    g.translate(dorsal.x, dorsal.y);
+    g.rotate(dorsal.angle + Math.PI + 0.1 + sway * 0.4);
+    drawRibbon(g, koi, koi.length * 0.3, koi.length * 0.035);
+    g.restore();
+
+    // Three loose pencil outlines
+    [[0.6, 1, 0.56, 0.9], [1.6, 2, 0.28, 0.75], [2.6, 3, 0.14, 0.65]].forEach(function(pass) {
+      g.strokeStyle = "rgba(34, 32, 36, " + pass[2] + ")";
+      g.lineWidth = pass[3];
+      bodyPath(g, koi, line, pass[0], pass[1]);
+      g.stroke();
+    });
+
+    // Gills and mouth
+    g.strokeStyle = "rgba(34, 32, 36, 0.58)";
+    g.lineWidth = 0.85;
+    [-1, 1].forEach(function(side) {
+      [0, 0.02].forEach(function(shift) {
+        var a = pointOn(koi, line, 0.2 + shift, side * 0.86);
+        var b = pointOn(koi, line, 0.25 + shift, side * 0.34);
+        var c = pointOn(koi, line, 0.17 + shift, side * 0.1);
+        g.beginPath();
+        g.moveTo(a.x, a.y);
+        g.quadraticCurveTo(b.x, b.y, c.x, c.y);
+        g.stroke();
+      });
+    });
+    var mouthA = pointOn(koi, line, 0.02, -0.8);
+    var mouthB = pointOn(koi, line, 0.045, 0);
+    var mouthC = pointOn(koi, line, 0.02, 0.8);
+    g.beginPath();
+    g.moveTo(mouthA.x, mouthA.y);
+    g.quadraticCurveTo(mouthB.x, mouthB.y, mouthC.x, mouthC.y);
+    g.stroke();
+
+    // Eyes: the near one is larger, which turns the head slightly
+    [[0.72, 1], [-0.84, 0.72]].forEach(function(entry) {
+      var eye = pointOn(koi, line, 0.085, entry[0]);
+      var radius = Math.max(1.5, koi.length * 0.02) * entry[1];
+      g.fillStyle = "#16141a";
+      g.strokeStyle = "rgba(34, 32, 36, 0.7)";
+      g.lineWidth = 0.6;
+      g.beginPath();
+      g.ellipse(eye.x, eye.y, radius, radius * 0.82, 0, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      g.fillStyle = "#ffffff";
+      g.beginPath();
+      g.arc(eye.x - radius * 0.32, eye.y - radius * 0.28, radius * 0.28, 0, Math.PI * 2);
+      g.fill();
+    });
+  }
+
+  /**
    * Speech bubble in front of the head of a koi, drawn in ink
    */
   function drawBubble(g, koi) {
@@ -1067,7 +1313,7 @@ function createPond(pond, startRobotic) {
     drawRipples(ctx, dt);
     kois.forEach(function(koi) {
       if (robotic) drawRobotKoi(ctx, koi);
-      else drawWatercolorKoi(ctx, koi);
+      else drawSketchKoi(ctx, koi);
     });
     ctx.drawImage(foreground, 0, 0, W, H);
     kois.forEach(function(koi) {
@@ -1117,6 +1363,7 @@ function createPond(pond, startRobotic) {
         delay: 0.3,
         target: { x: area.x + area.w * 0.36, y: area.y + area.h * 0.46 },
         accent: red,
+        sketch: { main: [232, 118, 48], deep: [190, 68, 22] },
         accents: [
           { at: 0.09, side: 0, size: 0.075 },
           { at: 0.29, side: -0.28, size: 0.14 },
@@ -1150,6 +1397,7 @@ function createPond(pond, startRobotic) {
         delay: 2.6,
         target: { x: area.x + area.w * 0.8, y: area.y + area.h * 0.62 },
         accent: ink,
+        sketch: { main: [46, 44, 48], deep: [16, 15, 18] },
         accents: [
           { at: 0.13, side: 0.1, size: 0.07 },
           { at: 0.3, side: 0.3, size: 0.13 },
