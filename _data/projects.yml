@@ -13,4 +13,4 @@
   description: Integrated AI models into STM32 firmware to decode hand movements from EEG and EMG signals, and benchmarked TinyML techniques for resource-limited hardware.
 - title: Imitation learning on a robotic arm
   context: "[EPFL AI Team](https://epflaiteam.ch/projects/dexter), Mar to Jul 2026"
-  description: "Imitation learning and RL pipelines with LeRobot and PyTorch on a leader-follower [SO-101](https://github.com/TheRobotStudio/SO-ARM100) setup, from teleoperated data collection to trained manipulation policies."
+  description: "Imitation learning pipelines with LeRobot and PyTorch on a leader-follower [SO-101](https://github.com/TheRobotStudio/SO-ARM100) setup, from teleoperated data collection to trained manipulation policies."

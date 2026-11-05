@@ -13,7 +13,7 @@ I'm currently a research assistant at the [Applied AI Lab (AAIL)](https://wp.uni
 
 At [N-Pulse](https://make.epfl.ch/projects/60/make-epfl-n-pulse-60), I first worked on firmware, integrating AI models on an STM32 to decode hand movements from EEG and EMG signals. I'm now working on computer vision, deploying a multi-class object detection model on an Arduino UNO Q so that a prosthetic arm can grab objects.
 
-Previously, I worked on imitation learning with the [EPFL AI Team](https://epflaiteam.ch/projects/dexter), using a leader arm and a follower arm ([SO-101](https://github.com/TheRobotStudio/SO-ARM100)) to collect demonstrations and train manipulation policies.
+Previously, I worked on imitation learning with the [EPFL AI Team](https://epflaiteam.ch/projects/dexter), using LeRobot with a leader arm and a follower arm ([SO-101](https://github.com/TheRobotStudio/SO-ARM100)) to collect demonstrations and train manipulation policies.
 
 Outside of robotics, I play piano, and I care a lot about my connection to Vietnam and France. There's more on that on my [Personal](/personal) page.
 
