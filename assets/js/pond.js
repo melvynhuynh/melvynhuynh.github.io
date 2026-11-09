@@ -24,6 +24,11 @@ function createPond(pond, startRobotic) {
   var visible = true;
   var robotic = startRobotic;
   var lastRipple = 0;
+  // The first koi always says hi in English, then each entrance picks another language
+  var greetings = ["你好！", "مرحبا!", "Привет!", "Xin chào!", "Salut !"];
+  var greetingBag = [];
+  var lastGreeting = null;
+  var spoken = 0;
 
   /**
    * Seeded random, so the drawing looks the same on every visit
@@ -43,6 +48,24 @@ function createPond(pond, startRobotic) {
 
   function pick(random, list) {
     return list[Math.floor(random() * list.length)];
+  }
+
+  // Shuffled bag, so every language comes up before one repeats, and never twice in a row
+  function nextGreeting() {
+    spoken++;
+    if (spoken === 1) return "Hi!";
+    if (!greetingBag.length) {
+      greetingBag = greetings.slice();
+      for (var i = greetingBag.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var swap = greetingBag[i];
+        greetingBag[i] = greetingBag[j];
+        greetingBag[j] = swap;
+      }
+      if (greetingBag[greetingBag.length - 1] === lastGreeting) greetingBag.unshift(greetingBag.pop());
+    }
+    lastGreeting = greetingBag.pop();
+    return lastGreeting;
   }
 
   function layer() {
@@ -382,6 +405,8 @@ function createPond(pond, startRobotic) {
     });
     koi.leaving = false;
     koi.stops = Math.floor(range(random, 2, 5));
+    koi.greeting = true;
+    koi.nextSay = clock + range(random, 0.4, 1.2);
     nextTarget(koi);
   }
 
@@ -432,8 +457,8 @@ function createPond(pond, startRobotic) {
     }
 
     if (koi.greeting && clock >= koi.nextSay && head.x > 0 && head.x < W && head.y > 0 && head.y < H) {
-      koi.say = { text: koi.greeting, born: clock, life: 3.2 };
-      koi.greeting = null;
+      koi.say = { text: nextGreeting(), born: clock, life: 3.2 };
+      koi.greeting = false;
     }
   }
 
@@ -977,6 +1002,8 @@ function createPond(pond, startRobotic) {
     g.font = "bold " + size + "px Charter, 'Bitstream Charter', Georgia, serif";
     g.textAlign = "center";
     g.textBaseline = "middle";
+    // Arabic reads right to left, so its punctuation goes on the left
+    g.direction = /[؀-ۿ]/.test(say.text) ? "rtl" : "ltr";
 
     var padX = size * 0.75;
     var boxW = g.measureText(say.text).width + padX * 2;
@@ -1106,6 +1133,9 @@ function createPond(pond, startRobotic) {
     var large = Math.min(H * 0.62, W * 0.34);
     var red = "204, 40, 22";
     var ink = "28, 26, 26";
+    spoken = 0;
+    greetingBag = [];
+    lastGreeting = null;
     kois = [
       makeKoi({
         x: -large * 0.15,
@@ -1138,7 +1168,7 @@ function createPond(pond, startRobotic) {
           { from: 0.2, to: 0.66, side: 0.68, width: 0.014, color: "rgba(255, 252, 244, 0.72)" }
         ],
         firstSay: 1.8,
-        greeting: "Hi!"
+        greeting: true
       }),
       makeKoi({
         x: area.x + area.w * 0.8,
@@ -1171,8 +1201,8 @@ function createPond(pond, startRobotic) {
           { from: 0.56, to: 0.8, side: 0.1, width: 0.013, color: "rgba(24, 22, 22, 0.55)" },
           { from: 0.3, to: 0.42, side: 0.5, width: 0.01, color: "rgba(255, 252, 244, 0.28)" }
         ],
-        firstSay: 0,
-        greeting: null
+        firstSay: 5.4,
+        greeting: true
       })
     ];
   }
@@ -1185,6 +1215,9 @@ function createPond(pond, startRobotic) {
         updateKoi(koi, 0.033);
       });
     }
+    kois.forEach(function(koi) {
+      koi.say = null;
+    });
     kois[0].say = { text: "Hi!", born: clock, life: Infinity };
     render(0);
   }
