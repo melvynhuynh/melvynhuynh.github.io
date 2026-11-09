@@ -1,5 +1,7 @@
 # melvynhuynh.github.io
 
+Live site: **https://melvynhuynh.github.io**
+
 Personal academic website, built with Jekyll and the [Bay](https://github.com/eliottvincent/bay) theme (ISC license, see `LICENSE.md`).
 
 ## Run locally
